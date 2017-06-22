@@ -71,6 +71,8 @@ public final class DefaultBlockLayout: BlockLayout {
     return background.leadingEdgeXOffset
   }
 
+  internal var firstLineHeight: CGFloat = 0
+
   internal override var absolutePosition: WorkspacePoint {
     didSet {
       // Update connection positions
@@ -206,7 +208,8 @@ public final class DefaultBlockLayout: BlockLayout {
     // background row based on a new maximum width, and calculate the size needed for this entire
     // BlockLayout.
     let minimalWidthRequired = max(minimalFieldWidthRequired, minimalStatementWidthRequired)
-    for backgroundRow in background.rows {
+    for i in 0 ..< background.rows.count {
+      let backgroundRow = background.rows[i]
       if backgroundRow.layouts.isEmpty {
         continue
       }
@@ -233,6 +236,33 @@ public final class DefaultBlockLayout: BlockLayout {
       }
 
       // Update the background row based on the new max width
+      backgroundRow.updateRenderProperties(minimalRowWidth: minimalWidthRequired,
+                                           leadingEdgeOffset: outputPuzzleTabXOffset)
+
+      var lineHeight: CGFloat = 0
+      for layout in backgroundRow.layouts {
+        if let defaultInputLayout = layout as? DefaultInputLayout {
+          lineHeight = max(lineHeight, defaultInputLayout.firstLineHeight)
+        } else {
+          lineHeight = max(lineHeight, layout.relativePosition.y + layout.totalSize.height)
+        }
+      }
+
+      if i == 0 {
+        firstLineHeight = lineHeight
+      }
+
+//      var maximumFirstRow =
+
+      for layout in backgroundRow.layouts {
+
+        if let inputLayout = layout as? DefaultInputLayout {
+          inputLayout.verticallyAlignRow(forHeight: lineHeight)
+        } else {
+          layout.relativePosition.y = (lineHeight - layout.totalSize.height) / 2.0
+        }
+      }
+
       backgroundRow.updateRenderProperties(minimalRowWidth: minimalWidthRequired,
                                            leadingEdgeOffset: outputPuzzleTabXOffset)
     }
@@ -265,9 +295,10 @@ public final class DefaultBlockLayout: BlockLayout {
     }
 
     if block.outputConnection != nil {
-      _outputConnectionRelativePosition = WorkspacePoint(
-        x: 0, y: self.config.workspaceUnit(for: DefaultLayoutConfig.PuzzleTabHeight) / 2)
+      _outputConnectionRelativePosition = WorkspacePoint(x: 0, y: firstLineHeight / 2.0)
     }
+
+    background.updateRenderProperties(fromBlockLayout: self)
 
     // Update the size required for this block
     self.contentSize = requiredContentSize()

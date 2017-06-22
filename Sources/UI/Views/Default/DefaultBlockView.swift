@@ -313,22 +313,31 @@ public final class DefaultBlockView: BlockView {
           // If there is another row after this, the inner-floor of the "C" is drawn by the
           // right edge of the next row.
         }
+
+        // Store bottom padding (to draw into the the top padding of the next row)
+        previousBottomPadding = row.bottomPadding
       } else if row.outputConnector {
         // Draw output connector and then the rest of the middle height
         let startingY = path.currentWorkspacePoint.y
+        bky_assert(puzzleTabHeight <= row.middleHeight,
+          message: "Middle height for the block layout is less than the space needed")
+
+        let rightLine = row.middleHeight - puzzleTabHeight
+
+        path.addLineTo(x: 0, y: rightLine / 2.0, relative: true)
+
         PathHelper.addPuzzleTab(toPath: path, drawTopToBottom: true,
           puzzleTabWidth: puzzleTabWidth, puzzleTabHeight: puzzleTabHeight)
-        let restOfVerticalEdge = startingY + row.middleHeight - path.currentWorkspacePoint.y
-        bky_assert(restOfVerticalEdge >= 0,
-          message: "Middle height for the block layout is less than the space needed")
-        path.addLineTo(x: 0, y: restOfVerticalEdge, relative: true)
+
+        path.addLineTo(x: 0, y: rightLine / 2.0 + row.bottomPadding, relative: true)
+
+        previousBottomPadding = 0
       } else {
         // Simply draw the middle height for the vertical edge
-        path.addLineTo(x: 0, y: row.middleHeight, relative: true)
-      }
+        path.addLineTo(x: 0, y: row.middleHeight + row.bottomPadding, relative: true)
 
-      // Store bottom padding (to draw into the the top padding of the next row)
-      previousBottomPadding = row.bottomPadding
+        previousBottomPadding = 0
+      }
     }
 
     if previousBottomPadding > 0 {
@@ -349,11 +358,17 @@ public final class DefaultBlockView: BlockView {
     // DRAW THE LEFT EDGES
 
     if background.outputConnector {
+      path.addLineTo(x: 0, y: background.firstLineHeight - path.currentWorkspacePoint.y, relative: true)
+
+      let leftLineY = path.currentWorkspacePoint.y - puzzleTabHeight
+
       // Add output connector
-      path.addLineTo(x: 0, y: puzzleTabHeight - path.currentWorkspacePoint.y, relative: true)
+      path.addLineTo(x: 0, y: -leftLineY / 2.0, relative: true)
 
       PathHelper.addPuzzleTab(toPath: path, drawTopToBottom: false,
         puzzleTabWidth: puzzleTabWidth, puzzleTabHeight: puzzleTabHeight)
+
+      path.addLineTo(x: 0, y: -leftLineY / 2.0, relative: true)
     }
 
     path.closePath()
@@ -374,11 +389,16 @@ public final class DefaultBlockView: BlockView {
         path.addLineTo(x: 0, y: inlineConnector.size.height, relative: true)
         // Bottom edge
         path.addLineTo(x: -xEdgeWidth, y: 0, relative: true)
-        // Left edge
-        path.addLineTo(x: 0, y: -(inlineConnector.size.height - puzzleTabHeight), relative: true)
+        // Start left edge
+        path.addLineTo(x: 0, y: inlineConnector.firstLineHeight - inlineConnector.size.height, relative: true)
+
+        let puzzleLineExtension = (inlineConnector.firstLineHeight - puzzleTabHeight) / 2.0
+        path.addLineTo(x: 0, y: -puzzleLineExtension, relative: true)
         // Puzzle notch
         PathHelper.addPuzzleTab(toPath: path, drawTopToBottom: false,
           puzzleTabWidth: puzzleTabWidth, puzzleTabHeight: puzzleTabHeight)
+        // Finish left edge
+        path.addLineTo(x: 0, y: -puzzleLineExtension, relative: true)
       }
     }
 
@@ -395,9 +415,9 @@ public final class DefaultBlockView: BlockView {
       return nil
     }
 
-    if !layout.hasHighlightedConnections() {
-      return nil
-    }
+//    if !layout.hasHighlightedConnections() {
+//      return nil
+//    }
 
     let notchWidth = layout.config.workspaceUnit(for: DefaultLayoutConfig.NotchWidth)
     let notchHeight = layout.config.workspaceUnit(for: DefaultLayoutConfig.NotchHeight)
@@ -408,9 +428,9 @@ public final class DefaultBlockView: BlockView {
     let path = WorkspaceBezierPath(engine: layout.engine)
 
     for connection in layout.block.directConnections {
-      if !layout.isConnectionHighlighted(connection) {
-        continue
-      }
+//      if !layout.isConnectionHighlighted(connection) {
+//        continue
+//      }
 
       let connectionRelativePosition = connection.position - layout.absolutePosition
 

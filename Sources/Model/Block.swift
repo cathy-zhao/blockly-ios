@@ -177,6 +177,7 @@ public final class Block : NSObject {
     self.name = name
     self.color = color
     self.inputs = inputs
+//    self.inputsInline = true
     self.inputsInline = inputsInline
     self.position = position
     self.shadow = shadow

@@ -56,6 +56,8 @@ open class InputView: LayoutView {
       return
     }
 
+//    backgroundColor = ColorHelper.makeColor(hue: CGFloat(arc4random() % 360))
+
     runAnimatableCode(animated) {
       if flags.intersectsWith([Layout.Flag_NeedsDisplay, Layout.Flag_UpdateViewFrame]) {
         // Update the view frame

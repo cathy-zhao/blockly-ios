@@ -57,18 +57,7 @@ public final class DefaultInputLayout: InputLayout {
       }
 
       // Update connection position
-      let connectionPoint: WorkspacePoint
-      if input.type == .statement {
-        connectionPoint = WorkspacePoint(
-          x: statementIndent + notchWidth / 2, y: statementRowTopPadding + notchHeight)
-      } else if input.inline {
-        connectionPoint = WorkspacePoint(
-          x: inlineConnectorPosition.x, y: inlineConnectorPosition.y + puzzleTabHeight / 2)
-      } else {
-        connectionPoint = WorkspacePoint(x: rightEdge - puzzleTabWidth, y: puzzleTabHeight / 2)
-      }
-
-      _connection.moveToPosition(self.absolutePosition, withOffset: connectionPoint)
+      updateConnectionPosition()
     }
   }
 
@@ -125,6 +114,8 @@ public final class DefaultInputLayout: InputLayout {
   public var minimalStatementWidthRequired: CGFloat {
     return statementIndent + statementConnectorWidth
   }
+
+  internal var firstLineHeight: CGFloat = 0
 
   // MARK: - Initializers
 
@@ -312,6 +303,25 @@ public final class DefaultInputLayout: InputLayout {
       let heightRequired = fieldMaximumYPoint
       self.contentSize = WorkspaceSize(width: widthRequired, height: heightRequired)
     }
+
+    self.firstLineHeight = fieldMaximumYPoint
+
+    if input.inline && targetBlockGroupLayout.blockLayouts.isEmpty {
+      firstLineHeight = max(firstLineHeight,
+                            inlineConnectorPosition.y + inlineConnectorSize.height + targetBlockGroupLayout.edgeInsets.bottom)
+    }
+
+    if let firstBlockLayout = targetBlockGroupLayout.blockLayouts.first as? DefaultBlockLayout {
+      if input.inline {
+        firstLineHeight = max(
+          firstLineHeight,
+          inlineConnectorPosition.y + firstBlockLayout.firstLineHeight +
+            targetBlockGroupLayout.edgeInsets.bottom)
+
+      } else {
+        firstLineHeight = max(firstLineHeight, firstBlockLayout.firstLineHeight)
+      }
+    }
   }
 
 
@@ -392,7 +402,86 @@ public final class DefaultInputLayout: InputLayout {
     }
   }
 
+  internal func verticallyAlignRow(forHeight rowHeight: CGFloat) {
+//    var defaultRowHeight = input.type == .statement ? statementMiddleHeight: rowHeight
+//    if let firstGrandchildInputLayout = blockGroupLayout.blockLayouts.first?.inputLayouts.first {
+//      defaultRowHeight = firstGrandchildInputLayout.totalSize.height
+//    }
+
+
+
+    for fieldLayout in fieldLayouts {
+//      if input.type == .statement {
+//
+//          fieldLayout.relativePosition.y += max((firstGrandchildInputLayout.totalSize.height - fieldLayout.totalSize.height) / 2.0, 0)
+//        } else {
+//          fieldLayout.relativePosition.y += max((statementMiddleHeight - fieldLayout.totalSize.height) / 2.0, 0)
+//        }
+////
+//
+//
+//      } else {
+//        fieldLayout.relativePosition.y += max((rowHeight - fieldLayout.totalSize.height) / 2.0, 0)
+//      }
+      fieldLayout.relativePosition.y += max((rowHeight - fieldLayout.totalSize.height) / 2.0, 0)
+    }
+
+    if input.type == .value {
+      if input.inline {
+//
+//        let relativeY = (rowHeight - firstLineHeight) / 2.0
+//
+//        if relativeY > 0 {
+//          blockGroupLayout.relativePosition.y = relativeY
+//          inlineConnectorPosition.y = relativeY
+//          updateConnectionPosition()
+//        }
+
+        if blockGroupLayout.blockLayouts.isEmpty {
+          let difference = (rowHeight - inlineConnectorSize.height) / 2.0 - inlineConnectorPosition.y
+
+          if difference > 0 {
+            blockGroupLayout.relativePosition.y += difference
+            inlineConnectorPosition.y += difference
+            updateConnectionPosition()
+          }
+        } else if let firstBlockLayout = blockGroupLayout.blockLayouts.first as? DefaultBlockLayout {
+          let difference = (rowHeight - blockGroupLayout.edgeInsets.top - firstBlockLayout.firstLineHeight - blockGroupLayout.edgeInsets.bottom) / 2.0 - firstBlockLayout.relativePosition.y
+
+          if difference > 0 {
+            blockGroupLayout.relativePosition.y += difference
+            inlineConnectorPosition.y += difference
+            updateConnectionPosition()
+          }
+        }
+      } else {
+        let difference = (rowHeight - blockGroupLayout.totalSize.height) / 2.0
+
+        if difference > 0 {
+          blockGroupLayout.relativePosition.y += difference
+          updateConnectionPosition()
+        }
+      }
+    }
+  }
+
   // MARK: - Private
+
+  fileprivate func updateConnectionPosition() {
+    let connectionPoint: WorkspacePoint
+    if input.type == .statement {
+      connectionPoint = WorkspacePoint(
+        x: statementIndent + notchWidth / 2, y: statementRowTopPadding + notchHeight)
+    } else if input.inline {
+      connectionPoint = WorkspacePoint(
+        x: inlineConnectorPosition.x, y: firstLineHeight / 2) //inlineConnectorPosition.y + (inlineConnectorSize.height / 2))
+//      x: inlineConnectorPosition.x, y: inlineConnectorPosition.y + (inlineConnectorSize.height / 2))
+    } else {
+      connectionPoint = WorkspacePoint(x: rightEdge - puzzleTabWidth, y: firstLineHeight / 2)
+    }
+
+    _connection.moveToPosition(self.absolutePosition, withOffset: connectionPoint)
+  }
 
   fileprivate func isLastInputOfBlockRow() -> Bool {
     if let block = input.sourceBlock, !block.inputsInline {
@@ -425,5 +514,6 @@ public final class DefaultInputLayout: InputLayout {
     self.statementRowTopPadding = 0
     self.statementRowBottomPadding = 0
     self.statementMiddleHeight = 0
+    firstLineHeight = 0
   }
 }

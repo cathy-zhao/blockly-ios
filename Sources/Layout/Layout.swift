@@ -97,6 +97,8 @@ open class Layout: NSObject {
 
   /// Position relative to `self.parentLayout`
   internal final var relativePosition: WorkspacePoint = WorkspacePoint.zero
+  /// The minimum content size that this layout should be.
+  internal final var minimumContentSize: WorkspaceSize = WorkspaceSize.zero
   /// Content size of this layout
   internal final var contentSize: WorkspaceSize = WorkspaceSize.zero {
     didSet {

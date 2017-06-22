@@ -38,6 +38,8 @@ extension DefaultBlockLayout {
     /// Flag if a output connector should be rendered on the left side of the block
     public fileprivate(set) var outputConnector: Bool = false
 
+    public fileprivate(set) var firstLineHeight: CGFloat = 0
+
     /// Flag if the block should render a hat
     public fileprivate(set) var startHat: Bool = false
 
@@ -86,6 +88,8 @@ extension DefaultBlockLayout {
           self.squareBottomLeftCorner = true
         }
       }
+
+      self.firstLineHeight = layout.firstLineHeight
     }
 
     /**
@@ -188,7 +192,12 @@ extension DefaultBlockLayout {
           self.rightEdge =
             lastInputLayout.relativePosition.x - leadingEdgeOffset + lastInputLayout.rightEdge
           self.outputConnector = (lastInputLayout.input.connection != nil)
-          self.middleHeight = layouts.map { $0.totalSize.height }.max()!
+          self.middleHeight = layouts.map { ($0 as? DefaultInputLayout)?.firstLineHeight ?? 0 }.max()!
+          self.bottomPadding = max(layouts.map { $0.totalSize.height }.max()! - middleHeight, 0)
+
+          let original = layouts.map { $0.totalSize.height }.max()!
+
+          print("middle: \(middleHeight), bottom: \(bottomPadding), ORIGINAL: \(original)")
 
           return
         }
@@ -205,7 +214,8 @@ extension DefaultBlockLayout {
         {
           let inlineConnector = InlineConnector(
             inputLayout.relativePosition + inputLayout.inlineConnectorPosition,
-            inputLayout.inlineConnectorSize)
+            inputLayout.inlineConnectorSize,
+            (inputLayout.blockGroupLayout.blockLayouts.first as? DefaultBlockLayout)?.firstLineHeight ?? inputLayout.inlineConnectorSize.height)
           self.inlineConnectors.append(inlineConnector)
         }
       }
@@ -239,13 +249,16 @@ extension DefaultBlockLayout {
     /// block.
     public var relativePosition: WorkspacePoint
 
+    public var firstLineHeight: CGFloat = 0
+
     /// The size of the inline connector.
     public var size: WorkspaceSize
 
     /// Initializer
-    fileprivate init(_ relativePosition: WorkspacePoint, _ size: WorkspaceSize) {
+    fileprivate init(_ relativePosition: WorkspacePoint, _ size: WorkspaceSize, _ firstLineHeight: CGFloat) {
       self.relativePosition = relativePosition
       self.size = size
+      self.firstLineHeight = firstLineHeight
     }
   }
 }
